@@ -1,0 +1,27 @@
+#!/bin/bash
+# "Warframe for Mac" app: starts the official Warframe launcher inside Wine.
+WRAPPER="$HOME/Library/Application Support/WarframeForMac/Warframe.app"
+BIN="$WRAPPER/Contents/MacOS/Sikarugir"
+
+alert() {
+  /usr/bin/osascript -e "display alert \"Warframe for Mac\" message \"$1\"" >/dev/null 2>&1
+}
+
+if [ ! -x "$BIN" ]; then
+  alert "Warframe for Mac is not installed. Run ./install.sh from the warframeformac folder."
+  exit 1
+fi
+
+# Already open? Keep it, unless the player says it is stuck.
+if /usr/bin/pgrep -f 'Warframe\.x64\.exe|Tools[/\\]Launcher\.exe' >/dev/null 2>&1; then
+  choice="$(/usr/bin/osascript -e 'button returned of (display dialog "Warframe is already open." & return & "If it is frozen, restart it." buttons {"Restart", "Keep it open"} default button "Keep it open" with title "Warframe for Mac")' 2>/dev/null)"
+  [ "$choice" = "Restart" ] || exit 0
+fi
+
+# Leftovers from a crashed session make the next start hang; clear only ours.
+"$BIN" WSS-wineserverkill >/dev/null 2>&1
+/usr/bin/pkill -9 -f "$WRAPPER/Contents/SharedSupport/wine" >/dev/null 2>&1
+/usr/bin/pkill -9 -f 'Warframe\.x64\.exe|Tools[/\\]Launcher\.exe' >/dev/null 2>&1
+sleep 1
+
+exec "$BIN"
